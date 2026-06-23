@@ -53,6 +53,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Auth login attempt for:', email);
 
     const user = await User.findOne({
       where: { email },
