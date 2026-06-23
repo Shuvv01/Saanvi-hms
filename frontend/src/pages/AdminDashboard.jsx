@@ -23,6 +23,18 @@ const emptyDoctorForm = {
   phone: "",
   password: "",
 };
+const emptyPatientForm = {
+  fullname: "",
+  email: "",
+  phone: "",
+  password: "",
+};
+const emptyAppointmentForm = {
+  patientName: "",
+  patientEmail: "",
+  doctorId: "",
+  appointmentDate: "",
+};
 const chartColors = ["#0d6efd", "#20c997", "#ffc107", "#dc3545"];
 
 function AdminDashboard() {
@@ -37,6 +49,9 @@ function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [doctorForm, setDoctorForm] = useState(emptyDoctorForm);
   const [editingDoctorId, setEditingDoctorId] = useState(null);
+  const [patientForm, setPatientForm] = useState(emptyPatientForm);
+  const [editingPatientId, setEditingPatientId] = useState(null);
+  const [appointmentForm, setAppointmentForm] = useState(emptyAppointmentForm);
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [appointmentSearch, setAppointmentSearch] = useState("");
@@ -184,6 +199,57 @@ function AdminDashboard() {
       await fetchAdminData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete user");
+    }
+  };
+
+  const resetPatientForm = () => {
+    setPatientForm(emptyPatientForm);
+    setEditingPatientId(null);
+  };
+
+  const handlePatientSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      if (editingPatientId) {
+        await axios.put(`${API_BASE}/patients/${editingPatientId}`, patientForm, { headers });
+        toast.success("Patient updated successfully");
+      } else {
+        await axios.post(`${API_BASE}/patients`, patientForm, { headers });
+        toast.success("Patient created successfully");
+      }
+      resetPatientForm();
+      await fetchAdminData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Patient action failed");
+    }
+  };
+
+  const startPatientEdit = (patient) => {
+    setEditingPatientId(patient.id);
+    setPatientForm({ fullname: patient.fullname, email: patient.email, phone: patient.phone, password: "" });
+    setSearchParams({ tab: "patients" });
+  };
+
+  const handleAppointmentSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      await axios.post(`${API_BASE}/appointments`, appointmentForm, { headers });
+      toast.success("Appointment created");
+      setAppointmentForm(emptyAppointmentForm);
+      await fetchAdminData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to create appointment");
+    }
+  };
+
+  const deleteAppointment = async (id) => {
+    if (!window.confirm("Delete this appointment?")) return;
+    try {
+      await axios.delete(`${API_BASE}/appointments/${id}`, { headers });
+      toast.success("Appointment deleted");
+      await fetchAdminData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete appointment");
     }
   };
 
@@ -561,36 +627,54 @@ function AdminDashboard() {
 
             {activeTab === "patients" && (
               <section className="dashboard-section">
-                <article className="panel">
-                  <div className="panel-heading">
-                    <h2>Patient Management</h2>
-                    <span className="badge text-bg-success">
-                      {patients.length} patients
-                    </span>
-                  </div>
-                  <DataTable
-                    headers={["Patient", "Email", "Phone", "Appointments", "Actions"]}
-                    emptyText="No patients found"
-                  >
-                    {patients.map((patient) => (
-                      <tr key={patient.id}>
-                        <td>{patient.fullname}</td>
-                        <td>{patient.email}</td>
-                        <td>{patient.phone}</td>
-                        <td>{patientAppointmentCounts[patient.email] || 0}</td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            type="button"
-                            onClick={() => deleteUser(patient)}
-                          >
-                            <i className="bi bi-trash" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </DataTable>
-                </article>
+                <div className="module-grid">
+                  <article className="panel">
+                    <div className="panel-heading">
+                      <h2>{editingPatientId ? "Edit Patient" : "Create Patient"}</h2>
+                      {editingPatientId && (
+                        <button className="btn btn-sm btn-outline-secondary" type="button" onClick={resetPatientForm}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                    <form className="stack-form" onSubmit={handlePatientSubmit}>
+                      <input type="text" className="form-control" placeholder="Full name" value={patientForm.fullname} onChange={(e) => setPatientForm({ ...patientForm, fullname: e.target.value })} required />
+                      <input type="email" className="form-control" placeholder="Email" value={patientForm.email} onChange={(e) => setPatientForm({ ...patientForm, email: e.target.value })} required />
+                      <input type="text" className="form-control" placeholder="Phone" value={patientForm.phone} onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })} required />
+                      <input type="password" className="form-control" placeholder={editingPatientId ? "New password (leave empty to keep)" : "Password"} value={patientForm.password} onChange={(e) => setPatientForm({ ...patientForm, password: e.target.value })} required={!editingPatientId} />
+                      <button className="btn btn-primary" type="submit">{editingPatientId ? "Update" : "Create"}</button>
+                    </form>
+                  </article>
+
+                  <article className="panel">
+                    <div className="panel-heading">
+                      <h2>Patient List</h2>
+                      <span className="badge text-bg-light">{patients.length} total</span>
+                    </div>
+                    <DataTable
+                      headers={["Patient", "Email", "Phone", "Appointments", "Actions"]}
+                      emptyText="No patients found"
+                    >
+                      {patients.map((patient) => (
+                        <tr key={patient.id}>
+                          <td>{patient.fullname}</td>
+                          <td>{patient.email}</td>
+                          <td>{patient.phone}</td>
+                          <td>{patientAppointmentCounts[patient.email] || 0}</td>
+                          <td>
+                            <button className="btn btn-sm btn-outline-primary" type="button" onClick={() => startPatientEdit(patient)}>
+                              <i className="bi bi-pencil" />
+                            </button>
+                            {" "}
+                            <button className="btn btn-sm btn-outline-danger" type="button" onClick={() => deleteUser(patient)}>
+                              <i className="bi bi-trash" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </DataTable>
+                  </article>
+                </div>
               </section>
             )}
 
@@ -634,6 +718,48 @@ function AdminDashboard() {
                       Search
                     </button>
                   </div>
+
+                  <div className="mb-4">
+                    <h3 className="mb-3">Create Appointment</h3>
+                    <form className="stack-form" onSubmit={handleAppointmentSubmit}>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="Patient name" 
+                        value={appointmentForm.patientName} 
+                        onChange={(e) => setAppointmentForm({ ...appointmentForm, patientName: e.target.value })} 
+                        required 
+                      />
+                      <input 
+                        type="email" 
+                        className="form-control" 
+                        placeholder="Patient email" 
+                        value={appointmentForm.patientEmail} 
+                        onChange={(e) => setAppointmentForm({ ...appointmentForm, patientEmail: e.target.value })} 
+                        required 
+                      />
+                      <select 
+                        className="form-select" 
+                        value={appointmentForm.doctorId} 
+                        onChange={(e) => setAppointmentForm({ ...appointmentForm, doctorId: e.target.value })} 
+                        required
+                      >
+                        <option value="">Select doctor</option>
+                        {doctors.map((d) => (
+                          <option key={d.id} value={d.id}>{d.fullname}</option>
+                        ))}
+                      </select>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        value={appointmentForm.appointmentDate} 
+                        onChange={(e) => setAppointmentForm({ ...appointmentForm, appointmentDate: e.target.value })} 
+                        required 
+                      />
+                      <button className="btn btn-primary" type="submit"><i className="bi bi-plus" /> Create Appointment</button>
+                    </form>
+                  </div>
+
                   <DataTable
                     headers={[
                       "Patient",
@@ -669,6 +795,14 @@ function AdminDashboard() {
                             <option value="Approved">Approved</option>
                             <option value="Rejected">Rejected</option>
                           </select>
+                          {" "}
+                          <button 
+                            className="btn btn-sm btn-outline-danger" 
+                            type="button" 
+                            onClick={() => deleteAppointment(appointment.id)}
+                          >
+                            <i className="bi bi-trash" />
+                          </button>
                         </td>
                       </tr>
                     ))}

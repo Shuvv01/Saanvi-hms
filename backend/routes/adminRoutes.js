@@ -11,6 +11,11 @@ const {
   createDoctor,
   updateDoctor,
   deleteDoctor,
+  createPatient,
+  updatePatient,
+  createAppointment,
+  updateAppointment,
+  deleteAppointment,
   deleteUser,
   getAppointments,
   updateAppointmentStatus,
@@ -34,9 +39,14 @@ router.put("/doctors/:id", updateDoctor);
 router.delete("/doctors/:id", deleteDoctor);
 
 router.get("/patients", getPatients);
+router.post("/patients", createPatient);
+router.put("/patients/:id", updatePatient);
 
 router.get("/appointments", getAppointments);
 
 router.put("/appointments/:id/status", updateAppointmentStatus);
+router.post("/appointments", createAppointment);
+router.put("/appointments/:id", updateAppointment);
+router.delete("/appointments/:id", deleteAppointment);
 
 module.exports = router;
